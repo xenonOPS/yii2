@@ -1,0 +1,68 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: php-shop
+  labels:
+    app: php-shop
+spec:
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: php-shop
+    spec:        
+      containers:
+      - name: php-fpm
+        image: image:tag
+        command: [
+         "/bin/bash",
+         "-c",
+         "/var/www/html/entrypoint.sh; php-fpm"
+        ]
+        env:
+        - name: DB_HOST
+          value: proxysql-pxc-proxysql.proxysql.svc.cluster.local
+        - name: DB_NAME
+          value: shop
+        - name: DB_PASS
+          value: secr3t
+        - name: DB_USER
+          value: root
+        - name: RUN_SERVICE
+          value: fpm
+        volumeMounts:
+        - name: shared-assets
+          mountPath: /var/www/html/assets
+        - name: shared-uploads
+          mountPath: /var/www/html/uploads
+      - name: nginx
+        image: image:tag
+        command: [
+         "/bin/bash",
+         "-c",
+         "/var/www/html/entrypoint.sh; /usr/sbin/nginx -g 'daemon off;'"
+        ]
+        env:
+        - name: DB_HOST
+          value: proxysql-pxc-proxysql.proxysql.svc.cluster.local
+        - name: DB_NAME
+          value: shop
+        - name: DB_PASS
+          value: secr3t
+        - name: DB_USER
+          value: root   
+        - name: RUN_SERVICE
+          value: nginx      
+        volumeMounts:
+        - name: shared-assets
+          mountPath: /var/www/html/assets
+        - name: shared-uploads
+          mountPath: /var/www/html/uploads          
+      volumes:
+      - name: shared-assets
+        persistentVolumeClaim:
+          claimName: php-assets
+      - name: shared-uploads
+        persistentVolumeClaim:
+          claimName: php-uploads            
